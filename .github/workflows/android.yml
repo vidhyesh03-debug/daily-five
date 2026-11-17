@@ -32,18 +32,27 @@ jobs:
             cp web/icons/icon-192.png $d/ic_launcher_foreground.png
           done
       - run: npx cap sync android
-      - run: cd android && ./gradlew assembleRelease --no-daemon
-      - name: Sign the APK
+      - name: Build and sign the APK
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          echo "$KEYSTORE_B64" | base64 -d > release.jks
-          BT=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
-          $BT/zipalign -p -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
-          $BT/apksigner sign --ks release.jks --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD --out daily-five.apk aligned.apk
-          $BT/apksigner verify daily-five.apk
-          rm release.jks
+          cd android
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            # Signed with your own key: later APKs install as updates over earlier ones.
+            ./gradlew assembleRelease --no-daemon
+            echo "$KEYSTORE_B64" | base64 -d > ../release.jks
+            BT=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
+            $BT/zipalign -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk ../aligned.apk
+            $BT/apksigner sign --ks ../release.jks --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD --out ../daily-five.apk ../aligned.apk
+            $BT/apksigner verify ../daily-five.apk
+            rm ../release.jks
+          else
+            # No signing key saved yet: a test-signed APK that installs fine, but a future APK
+            # will need the old one uninstalled first. Add the two secrets to fix that.
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk ../daily-five.apk
+          fi
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
