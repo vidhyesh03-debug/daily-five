@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Five</title>
+<meta name="description" content="Five jobs worth applying to, every morning.">
+<meta name="theme-color" content="#14201c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a sales call sheet. Ranked rows, the fit score in the right margin, actions under each row. */
+:root {
+  --bg: #f3f5f2; --surface: #ffffff; --sunk: #e9ede8; --ink: #14201c; --muted: #5a6762; --line: #d9e0dc;
+  --accent: #d98e04; --accent-ink: #7f5200; --accent-soft: #fbedcc;
+  --good: #1e7a4c; --good-soft: #dcf1e4; --bad: #b3261e; --bad-soft: #f8dedb; --focus: #1b6fd6;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1412; --surface: #161f1c; --sunk: #1d2824; --ink: #e6eeea; --muted: #9aa8a2; --line: #2a3632;
+    --accent: #f2a93b; --accent-ink: #f7c46c; --accent-soft: #3a2c10;
+    --good: #5cc98f; --good-soft: #143425; --bad: #f08a80; --bad-soft: #3d1c19; --focus: #7db2ff;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+       padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+a { color: inherit; }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+.top { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; flex-direction: column; gap: 10px; padding-block: 14px 0; }
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; letter-spacing: -0.02em; line-height: 1; }
+.brand h1 span { color: var(--accent); }
+.who { font-size: 0.8rem; color: var(--muted); text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
+.who .email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52vw; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; margin-top: -6px; }
+.tab { border: 0; background: none; padding: 10px 12px; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .n { font-family: var(--font-data); font-size: 0.75rem; margin-left: 4px; color: var(--muted); }
+main .wrap { padding-block: 18px 48px; }
+main section { display: flex; flex-direction: column; gap: 16px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: 0.9rem; cursor: pointer; text-decoration: none; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.on { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+.btn.ghost { background: none; border-color: transparent; color: var(--muted); }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: none; }
+.btn[disabled] { opacity: 0.55; cursor: progress; }
+.linkish { border: 0; background: none; padding: 2px; color: var(--muted); cursor: pointer; text-decoration: underline; font-size: 0.8rem; }
+
+.strip { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 0.88rem; color: var(--muted); }
+.strip b { font-family: var(--font-data); color: var(--ink); font-weight: 700; }
+.lede { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; text-wrap: balance; }
+.list { display: flex; flex-direction: column; gap: 12px; }
+#view-today .list, #view-applied .list, .narrow { max-width: 780px; width: 100%; }
+
+.job { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; }
+.job.dim { opacity: 0.55; }
+.job.norank { grid-template-columns: 1fr auto; }
+.job.norank .rank { display: none; }
+.rank { grid-row: 1 / span 2; font-family: var(--font-display); font-weight: 800; font-size: 2rem; line-height: 1; color: var(--accent); min-width: 1.2ch; }
+.co-line { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; font-size: 0.88rem; color: var(--muted); }
+.co-line .co { font-weight: 600; color: var(--ink); }
+.star { border: 0; background: none; cursor: pointer; font-size: 1.05rem; line-height: 1; padding: 2px; color: var(--line); }
+.star[aria-pressed="true"] { color: var(--accent); }
+.fit { grid-row: 1 / span 2; grid-column: -2; text-align: center; min-width: 54px; padding: 6px 8px; border-radius: 10px; background: var(--sunk); align-self: start; }
+.fit b { display: block; font-family: var(--font-data); font-size: 1.35rem; line-height: 1.1; }
+.fit small { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.fit.good { background: var(--good-soft); } .fit.good b { color: var(--good); }
+.fit.ok { background: var(--accent-soft); } .fit.ok b { color: var(--accent-ink); }
+.title { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.12rem; line-height: 1.3; text-wrap: balance; min-width: 0; overflow-wrap: anywhere; }
+.body { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; margin-top: 8px; min-width: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 0.78rem; padding: 3px 9px; border-radius: 999px; background: var(--sunk); color: var(--muted); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.chip.status { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.chip.status.applied, .chip.status.interviewing, .chip.status.offer { background: var(--good-soft); color: var(--good); }
+.chip.status.rejected, .chip.status.withdrawn, .chip.status.archived { background: var(--bad-soft); color: var(--bad); }
+.chip.warn { background: var(--bad-soft); color: var(--bad); }
+.summary { margin: 0; max-width: 68ch; }
+details { font-size: 0.9rem; }
+details summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.why { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 20px; margin-top: 8px; }
+.why h4 { margin: 0 0 4px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.why ul { margin: 0; padding-left: 18px; }
+.by { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.app-tools { display: grid; grid-template-columns: minmax(0, 220px) 1fr; gap: 8px; align-items: start; }
+.app-tools label, .field label, .field .label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 4px; font-weight: 600; }
+select, input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="url"], input[type="search"], textarea {
+  width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 9px 11px; min-height: 42px; }
+textarea { resize: vertical; min-height: 44px; }
+.history { font-size: 0.8rem; color: var(--muted); font-family: var(--font-data); }
+.group-h { margin: 8px 0 0; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; cursor: pointer; min-height: 36px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.search { flex: 1 1 200px; min-width: 0; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { margin: 0; font-family: var(--font-display); font-size: 1.2rem; }
+.panel p { margin: 0; color: var(--muted); max-width: 64ch; }
+.panel.error { border-color: var(--bad); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.field { min-width: 0; }
+.hint { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+.choice { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.choice input { margin-top: 4px; }
+.choice b { display: block; }
+.choice span { color: var(--muted); font-size: 0.88rem; }
+.formerr { color: var(--bad); font-size: 0.88rem; min-height: 1em; }
+.codebox { font-family: var(--font-data); font-size: 1.4rem; letter-spacing: 0.15em; padding: 10px 14px; background: var(--sunk); border-radius: 10px; display: inline-block; }
+.share { white-space: pre-wrap; font-size: 0.85rem; background: var(--sunk); border-radius: 10px; padding: 12px; margin: 0; overflow-wrap: anywhere; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row .meta { color: var(--muted); font-size: 0.82rem; }
+.company { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; cursor: pointer; text-align: left; width: 100%; }
+.company .count { font-family: var(--font-data); font-weight: 700; color: var(--accent-ink); }
+.skeleton { height: 128px; border-radius: var(--radius); background: var(--sunk); }
+.empty { color: var(--muted); padding: 24px 0; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; z-index: 20; max-width: calc(100% - 32px); }
+.auth { max-width: 440px; margin: 6vh auto 0; }
+
+@media (min-width: 900px) {
+  #jobs-body.grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  main .wrap { padding-block: 26px 64px; }
+}
+@media (max-width: 480px) {
+  .app-tools { grid-template-columns: 1fr; }
+  .rank { font-size: 1.6rem; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Daily <span>Five</span></h1>
+      <div class="who" id="who" hidden><span class="email" id="who-email"></span><button class="linkish" id="signout" type="button">Sign out</button></div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Sections" hidden>
+      <button class="tab" role="tab" id="tab-today" data-view="today">Today</button>
+      <button class="tab" role="tab" id="tab-jobs" data-view="jobs">All jobs<span class="n" id="n-jobs"></span></button>
+      <button class="tab" role="tab" id="tab-applied" data-view="applied">My applications<span class="n" id="n-applied"></span></button>
+      <button class="tab" role="tab" id="tab-profile" data-view="profile">Profile</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section id="view-loading"><div class="skeleton"></div><div class="skeleton"></div></section>
+
+    <section id="view-auth" hidden>
+      <form class="panel auth" id="auth-form" novalidate>
+        <h2 id="auth-title">Sign in</h2>
+        <p id="auth-sub">Five jobs worth applying to, every morning.</p>
+        <div class="seg" role="group" aria-label="Sign in or create account">
+          <button type="button" id="mode-signin" aria-pressed="true">I have an account</button>
+          <button type="button" id="mode-signup" aria-pressed="false">First time here</button>
+        </div>
+        <div class="field"><label for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="auth-password">Password</label><input id="auth-password" type="password" autocomplete="current-password" minlength="8" required>
+          <div class="hint" id="pw-hint" hidden>At least 8 characters.</div></div>
+        <div class="field" id="code-field" hidden><label for="auth-code">Invite code</label><input id="auth-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. 7F3A9C21">
+          <div class="hint">From the person who invited you. It only works with the email they invited.</div></div>
+        <div class="formerr" id="auth-error" role="alert"></div>
+        <button class="btn primary" type="submit" id="auth-submit">Sign in</button>
+      </form>
+    </section>
+
+    <section id="view-claim" hidden>
+      <form class="panel auth" id="claim-form" novalidate>
+        <h2>Enter your invite code</h2>
+        <p>You're signed in as <b id="claim-email"></b>, but this account hasn't joined yet. Enter the code from the person who invited you.</p>
+        <div class="field"><label for="claim-code">Invite code</label><input id="claim-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+        <div class="formerr" id="claim-error" role="alert"></div>
+        <button class="btn primary" type="submit">Join</button>
+      </form>
+    </section>
+
+    <section id="view-today" hidden><div class="list" id="today-body"></div></section>
+
+    <section id="view-jobs" hidden>
+      <div class="filters">
+        <div class="seg" id="jobs-mode" role="group" aria-label="Show">
+          <button type="button" data-m="jobs" aria-pressed="true">Jobs</button>
+          <button type="button" data-m="companies" aria-pressed="false">Companies hiring</button>
+        </div>
+      </div>
+      <div class="filters">
+        <div class="seg" id="job-filter" role="group" aria-label="Filter">
+          <button type="button" data-f="all" aria-pressed="true">All</button>
+          <button type="button" data-f="fav" aria-pressed="false">★ Favourites</button>
+          <button type="button" data-f="city" aria-pressed="false" id="f-city-btn">My city</button>
+          <button type="button" data-f="remote" aria-pressed="false">Remote</button>
+          <button type="button" data-f="new" aria-pressed="false">Not acted on</button>
+        </div>
+        <input class="search" id="job-search" type="search" placeholder="Search company or title" aria-label="Search company or title">
+      </div>
+      <div class="list" id="jobs-body"></div>
+    </section>
+
+    <section id="view-applied" hidden><div class="list" id="applied-body"></div></section>
+
+    <section id="view-profile" hidden><div class="list narrow" id="profile-body"></div></section>
+  </div>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

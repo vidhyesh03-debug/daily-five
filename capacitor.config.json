@@ -1,0 +1,9 @@
+{
+  "appId": "io.github.vidhyesh03debug.dailyfive",
+  "appName": "Daily Five",
+  "webDir": "web",
+  "server": {
+    "url": "https://vidhyesh03-debug.github.io/daily-five/",
+    "cleartext": false
+  }
+}

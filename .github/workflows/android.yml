@@ -1,0 +1,56 @@
+# Builds the Android app (an APK that opens the web app) and attaches it to the "latest" release.
+# Only needs to run again if the app's name, icon or settings change; content updates come from the website.
+name: Build Android app
+on:
+  push:
+    branches: [main]
+    paths: [capacitor.config.json, package.json, .github/workflows/android.yml, web/icons/**]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm install
+      - run: npx cap add android
+      - name: Use the Daily Five icon
+        run: |
+          RES=android/app/src/main/res
+          rm -rf $RES/mipmap-anydpi-v26
+          for d in $RES/mipmap-*; do
+            cp web/icons/icon-192.png $d/ic_launcher.png
+            cp web/icons/icon-192.png $d/ic_launcher_round.png
+            cp web/icons/icon-192.png $d/ic_launcher_foreground.png
+          done
+      - run: npx cap sync android
+      - run: cd android && ./gradlew assembleRelease --no-daemon
+      - name: Sign the APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > release.jks
+          BT=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
+          $BT/zipalign -p -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks release.jks --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD --out daily-five.apk aligned.apk
+          $BT/apksigner verify daily-five.apk
+          rm release.jks
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Daily Five for Android
+          make_latest: true
+          files: daily-five.apk
+          body: |
+            Download daily-five.apk on your Android phone and open it to install.
+            If Android asks, allow your browser to "install unknown apps".
+            The app always shows the latest version of Daily Five; you only need a new APK if the app's icon or name changes.
