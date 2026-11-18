@@ -455,7 +455,9 @@
   // ---------- Owner: invites ----------
   function shareText(email, code) {
     return `You're invited to Daily Five, an app that picks five jobs for you every morning.\n\n` +
-      `1. Open ${CFG.appUrl}\n   (Android app: ${CFG.apkUrl})\n` +
+      `1. Open ${CFG.appUrl}\n` +
+      `   iPhone: open it in Safari, tap Share, then "Add to Home Screen"\n` +
+      `   Android: install the app from ${CFG.apkUrl}\n` +
       `2. Tap “First time here”\n3. Email: ${email}\n   Choose a password\n   Invite code: ${code}\n\n` +
       `A resume is optional. Without one you'll still see which companies are hiring for your roles.`;
   }
