@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Only this site's own files may run, and data may only go to this app's Supabase project. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://njqkriltfipnvrzvqqze.supabase.co; worker-src 'self' blob:; manifest-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
 <title>Daily Five</title>
 <meta name="description" content="Five jobs worth applying to, every morning.">
 <meta name="theme-color" content="#14201c">
@@ -143,8 +146,23 @@ textarea { resize: vertical; min-height: 44px; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; z-index: 20; max-width: calc(100% - 32px); }
 .auth { max-width: 440px; margin: 6vh auto 0; }
 
+details.sector { border-top: 1px solid var(--line); }
+details.sector > summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 14px 4px; cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
+details.sector > summary::-webkit-details-marker { display: none; }
+details.sector > summary::after { content: "▸"; color: var(--muted); transition: transform 0.15s; }
+details.sector[open] > summary::after { transform: rotate(90deg); }
+.sector-name { flex: 1; }
+.sector-count { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+.sector-body { padding-bottom: 14px; }
+.sector-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+.sector-chips button { white-space: nowrap; }
+.file-drop { border: 2px dashed var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.privacy-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--ink); }
+.privacy-list li::marker { color: var(--good); }
 @media (min-width: 900px) {
-  #jobs-body.grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .sector-body .grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
   main .wrap { padding-block: 26px 64px; }
 }
 @media (max-width: 480px) {
