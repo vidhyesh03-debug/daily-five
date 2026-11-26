@@ -99,6 +99,18 @@ main section { display: flex; flex-direction: column; gap: 16px; }
 .chip.status.applied, .chip.status.interviewing, .chip.status.offer { background: var(--good-soft); color: var(--good); }
 .chip.status.rejected, .chip.status.withdrawn, .chip.status.archived { background: var(--bad-soft); color: var(--bad); }
 .chip.warn { background: var(--bad-soft); color: var(--bad); }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.stretch { background: var(--accent-soft); color: var(--accent-ink); }
+.snippet { margin: 0; color: var(--ink); max-width: 68ch; font-size: 0.93rem; }
+.btn.info { padding-inline: 12px; }
+dialog#job-dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink);
+  width: min(680px, calc(100% - 24px)); max-height: calc(100% - 48px); padding: 0; }
+dialog#job-dialog::backdrop { background: rgba(10, 16, 14, 0.55); }
+#job-dialog-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+#job-dialog-body h2 { margin: 0; }
+.jd-section h4 { margin: 0 0 6px; font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.jd-section ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.jd-section p { margin: 0; }
 .summary { margin: 0; max-width: 68ch; }
 details { font-size: 0.9rem; }
 details summary { cursor: pointer; color: var(--muted); font-weight: 600; }
@@ -246,6 +258,7 @@ details.sector[open] > summary::after { transform: rotate(90deg); }
     <section id="view-profile" hidden><div class="list narrow" id="profile-body"></div></section>
   </div>
 </main>
+<dialog id="job-dialog" aria-labelledby="job-dialog-title"><div id="job-dialog-body"></div></dialog>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="vendor/supabase.js"></script>

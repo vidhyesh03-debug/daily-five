@@ -1,7 +1,7 @@
 // Daily Five background helper:
 //  * keeps the app shell available offline (network first, so updates arrive as soon as you're online)
 //  * shows morning alerts and opens the right job when one is tapped
-const CACHE = "daily-five-v2";
+const CACHE = "daily-five-v3";
 const SHELL = ["./", "index.html", "app.js", "config.js", "vendor/supabase.js", "manifest.webmanifest", "icons/icon-192.png"];
 
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });

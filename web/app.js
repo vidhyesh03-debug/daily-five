@@ -18,7 +18,7 @@
     "Education", "Travel & mobility", "Other"];
   const state = { me: null, home: null, jobs: null, apps: null, settings: null, admin: null,
                   filter: "all", q: "", jobsMode: "jobs", sector: "all", openSectors: new Set(),
-                  focusJob: null, view: null, pendingResume: null, dictionary: null };
+                  focusJob: null, view: null, pendingResume: null, dictionary: null, showSenior: false };
 
   // ---------- helpers ----------
   const $ = (id) => document.getElementById(id);
@@ -182,6 +182,98 @@
     if (!Array.isArray(items) || !items.length) return null;
     return el("div", {}, el("h4", { text: heading }), el("ul", {}, items.map((t) => el("li", { text: t }))));
   }
+  // How a job's experience requirement compares with yours
+  function myYears() { return state.home?.years_experience ?? state.settings?.years_experience ?? null; }
+  function expFit(j) {
+    const y = j.years_required, mine = myYears();
+    if (y == null) return null;
+    if (mine == null) return { cls: "", text: `Asks ${y}+ yrs` };
+    if (y <= mine + 1) return { cls: "good", text: `Asks ${y}+ yrs · fits you` };
+    if (y <= mine + 2) return { cls: "stretch", text: `Asks ${y}+ yrs · a stretch` };
+    return { cls: "warn", text: `Asks ${y}+ yrs · needs more experience` };
+  }
+  const tooSenior = (j) => { const f = expFit(j); return !!f && f.cls === "warn"; };
+
+  // ---------- Job details (ⓘ) ----------
+  // Turns a long job post into short sections: the role, what they want, benefits, about the company.
+  function summarizeJob(text, highlights) {
+    const out = { role: [], wants: [], perks: [], about: "" };
+    const clean = (t) => t.replace(/^\s*(?:[•*\-–·●▪◦]+|\d{1,2}[.)])\s*/, "").replace(/\s+/g, " ").trim();
+    const short = (t) => (t.length > 170 ? t.slice(0, 167).trimEnd() + "…" : t);
+    if (highlights && typeof highlights === "object") {
+      out.role = (highlights.Responsibilities || []).map(clean).filter(Boolean).slice(0, 5).map(short);
+      out.wants = (highlights.Qualifications || []).map(clean).filter(Boolean).slice(0, 5).map(short);
+      out.perks = (highlights.Benefits || []).map(clean).filter(Boolean).slice(0, 4).map(short);
+    }
+    const lines = String(text || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const H = [
+      ["role", /(responsib|what you('|’)ll do|what you will do|the role|your role|day[- ]to[- ]day|key result|in this role|the opportunity|what you('|’)ll be doing)/i],
+      ["wants", /(requirement|qualif|what you('|’)ll bring|what we('|’)re looking for|who you are|you have|skills|must have|about you|what you bring|ideal candidate|experience)/i],
+      ["perks", /(benefit|perks|what we offer|why join|compensation|why you('|’)ll love)/i],
+      ["about", /^(about|who we are|our company|company overview)/i],
+    ];
+    let section = "intro"; const found = { intro: [], role: [], wants: [], perks: [], about: [] };
+    for (const line of lines) {
+      const isHeading = line.length < 70 && !/[.!?]$/.test(line) && H.some(([, re]) => re.test(line));
+      if (isHeading) { section = H.find(([, re]) => re.test(line))[0]; continue; }
+      found[section].push(line);
+    }
+    if (!out.role.length) out.role = found.role.map(clean).filter((t) => t.length > 3).slice(0, 5).map(short);
+    // Text before the first heading usually describes the job, unless it's the company blurb
+    if (!out.role.length) out.role = found.intro.map(clean)
+      .filter((t) => t.length > 25 && /(you will|you'll|as an? |this role|the role|responsib|we are looking|we're looking|join)/i.test(t))
+      .slice(0, 3).map(short);
+    if (!out.wants.length) out.wants = found.wants.map(clean).filter((t) => t.length > 3).slice(0, 5).map(short);
+    if (!out.perks.length) out.perks = found.perks.map(clean).filter((t) => t.length > 3).slice(0, 4).map(short);
+    out.about = short(clean((found.about.join(" ") || "").split(/(?<=[.!?])\s+/).slice(0, 2).join(" ")));
+    if (!out.role.length && !out.wants.length) {
+      // No headings: take the first few sentences that talk about the job.
+      const sentences = String(text || "").replace(/\s+/g, " ").split(/(?<=[.!?])\s+/).filter((t) => t.length > 30);
+      out.role = sentences.filter((t) => /(you will|you'll|responsib|manage|own|drive|build|work with|support)/i.test(t)).slice(0, 4).map(short);
+      out.wants = sentences.filter((t) => /(years|experience|degree|skills?|knowledge|ability|proficien)/i.test(t)).slice(0, 4).map(short);
+      if (!out.role.length) out.role = sentences.slice(0, 3).map(short);
+    }
+    return out;
+  }
+  async function openJobDetails(jobId, btn) {
+    const dlg = $("job-dialog"), box = $("job-dialog-body");
+    box.replaceChildren(el("div", { class: "skeleton" }));
+    if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+    try {
+      const d = await rpc("app_job_detail", { p_job_id: jobId });
+      if (!d) throw new Error("This job is no longer available.");
+      const sum = summarizeJob(d.description, d.highlights);
+      const fit = expFit(d);
+      const chips = el("div", { class: "chips" },
+        d.location ? el("span", { class: "chip", text: d.location }) : null,
+        d.work_mode && d.work_mode !== "unknown" ? el("span", { class: "chip", text: d.work_mode[0].toUpperCase() + d.work_mode.slice(1) }) : null,
+        d.employment_type ? el("span", { class: "chip", text: String(d.employment_type).replace(/_/g, " ").toLowerCase() }) : null,
+        fit ? el("span", { class: "chip " + fit.cls, text: fit.text }) : null,
+        d.salary_min || d.salary_max ? el("span", { class: "chip", text: `Pay ${d.salary_min ?? "?"}–${d.salary_max ?? "?"} ${d.salary_currency || ""}`.trim() }) : null,
+        d.publisher ? el("span", { class: "chip", text: "via " + d.publisher }) : null);
+      const section = (title, items) => items && items.length
+        ? el("section", { class: "jd-section" }, el("h4", { text: title }), el("ul", {}, items.map((t) => el("li", { text: t })))) : null;
+      const url = safeUrl(d.url);
+      box.replaceChildren(...[
+        el("p", { class: "co-line" }, el("span", { class: "co", text: d.company }), d.sector ? el("span", { text: "· " + d.sector }) : null),
+        el("h2", { class: "title", id: "job-dialog-title", text: d.title }),
+        chips,
+        d.score != null ? el("p", { class: "summary", text: `Fit ${d.score}/100. ${d.summary || ""}` }) : null,
+        section("The role", sum.role),
+        section("What they're looking for", sum.wants),
+        section("Benefits", sum.perks),
+        sum.about ? el("section", { class: "jd-section" }, el("h4", { text: "About " + d.company }), el("p", { text: sum.about })) : null,
+        !sum.role.length && !sum.wants.length ? el("p", { class: "hint", text: "This posting has no description we can summarise. Open the posting for full details." }) : null,
+        el("p", { class: "hint", text: "A short summary of the job post. Open the posting for the full description." }),
+        el("div", { class: "actions" },
+          url ? el("a", { class: "btn primary", href: url, target: "_blank", rel: "noopener noreferrer", text: "Open posting ↗" }) : null,
+          el("button", { class: "btn", type: "button", "data-act": "close-dialog", text: "Close" }))].filter(Boolean));
+    } catch (e) {
+      box.replaceChildren(el("p", { class: "formerr", text: errText(e) }),
+        el("button", { class: "btn", type: "button", "data-act": "close-dialog", text: "Close" }));
+    }
+  }
+
   function jobRow(j, opts = {}) {
     const art = el("article", { class: "job" + (opts.rank ? "" : " norank") + (j.dismissed ? " dim" : ""), "data-job": j.job_id });
     const star = el("button", { class: "star", type: "button", "aria-pressed": j.favourite ? "true" : "false",
@@ -195,11 +287,14 @@
     const chips = el("div", { class: "chips" });
     if (j.location) chips.append(el("span", { class: "chip", text: j.location }));
     if (j.work_mode && j.work_mode !== "unknown") chips.append(el("span", { class: "chip", text: j.work_mode[0].toUpperCase() + j.work_mode.slice(1) }));
-    if (j.years_required != null) chips.append(el("span", { class: "chip", text: "Asks " + j.years_required + "+ yrs" }));
+    const fit = expFit(j);
+    if (fit) chips.append(el("span", { class: "chip " + fit.cls, text: fit.text }));
+    if (j.publisher) chips.append(el("span", { class: "chip", text: "via " + j.publisher }));
     if (j.status) chips.append(el("span", { class: "chip status " + j.status, text: STATUS_LABEL[j.status] || j.status }));
     if (j.first_seen) chips.append(el("span", { class: "chip", text: "Found " + fmtDate(j.first_seen, { day: "numeric", month: "short" }) }));
 
     const body = el("div", { class: "body" }, chips);
+    if (j.snippet) body.append(el("p", { class: "snippet", text: j.snippet }));
     if (j.score != null && j.summary) body.append(el("p", { class: "summary", text: j.summary }));
     const plus = j.score != null ? bullets(j.strengths, "Works for you") : null;
     const minus = j.score != null ? bullets(j.gaps, "Watch out for") : null;
@@ -209,6 +304,7 @@
 
     const actions = el("div", { class: "actions" });
     const url = safeUrl(j.url);
+    actions.append(el("button", { class: "btn info", type: "button", "data-act": "info", "aria-label": "Job details for " + j.title, text: "ⓘ Details" }));
     if (url) actions.append(el("a", { class: "btn primary", href: url, target: "_blank", rel: "noopener noreferrer", text: "Open posting ↗" }));
     if (opts.manage) {
       body.append(actions, manageTools(j));
@@ -276,6 +372,7 @@
     if (f === "city" && !(city && (j.location || "").toLowerCase().includes(city))) return false;
     if (f === "remote" && j.work_mode !== "remote" && !/remote/i.test(j.location || "")) return false;
     if (f === "new" && j.status) return false;
+    if (!state.showSenior && tooSenior(j)) return false;
     if (q && !(j.company + " " + j.title).toLowerCase().includes(q)) return false;
     return true;
   }
@@ -328,6 +425,10 @@
     const rows = state.sector === "all" ? matching : matching.filter((j) => (j.sector || "Other") === state.sector);
     const searching = !!state.q.trim() || state.sector !== "all" || rows.length <= 12;
     const kids = [sectorChips(matching)];
+    const hidden = state.showSenior ? 0 : state.jobs.filter((j) => tooSenior(j)).length;
+    if (hidden || state.showSenior) kids.push(el("p", { class: "hint" },
+      state.showSenior ? "Showing roles that ask for more experience than you have. " : `${hidden} role${hidden === 1 ? " needs" : "s need"} more experience than your ${myYears()} years, so they're hidden. `,
+      el("button", { class: "linkish", type: "button", "data-act": "show-senior", text: state.showSenior ? "Hide them" : "Show them" })));
     if (!rows.length) {
       kids.push(el("p", { class: "empty", text: "No jobs match this filter." }));
     } else if (state.jobsMode === "companies") {
@@ -516,6 +617,28 @@
     const own = list($("f-skills")?.value || "").map((x) => x.toLowerCase());
     return [...new Set([...state.dictionary, ...own])].filter((k) => k && t.includes(k));
   }
+  // Years of work experience from date ranges like "Aug 2024 – Present" or "Jan 2022 - Mar 2023".
+  // Year-only ranges (usually education) are ignored; overlapping jobs are counted once.
+  function estimateYears(text) {
+    const M = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const mon = "(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\.?";
+    const re = new RegExp(`${mon}\\s*[’']?(\\d{2,4})\\s*(?:-|–|—|to|till)\\s*(?:(present|current|now|today|date)|${mon}\\s*[’']?(\\d{2,4}))`, "gi");
+    const yr = (y) => { const n = Number(y); return n < 100 ? 2000 + n : n; };
+    const now = new Date(), nowIdx = now.getFullYear() * 12 + now.getMonth();
+    const spans = [];
+    for (const m of String(text || "").matchAll(re)) {
+      const start = yr(m[2]) * 12 + M[m[1].toLowerCase().slice(0, 3)];
+      const end = m[3] ? nowIdx : yr(m[5]) * 12 + M[m[4].toLowerCase().slice(0, 3)];
+      if (start >= 1970 * 12 && end >= start && end <= nowIdx + 1) spans.push([start, end]);
+    }
+    spans.sort((a, b) => a[0] - b[0]);
+    let total = 0, cur = null;
+    for (const sp of spans) {
+      if (!cur || sp[0] > cur[1]) { if (cur) total += cur[1] - cur[0]; cur = [...sp]; } else cur[1] = Math.max(cur[1], sp[1]);
+    }
+    if (cur) total += cur[1] - cur[0];
+    return spans.length ? Math.floor(total / 12) : null;
+  }
   function showResumeResult(r) {
     const status = $("resume-status"), chips = $("resume-skills"), keep = $("resume-keep");
     if (!r) { status.textContent = ""; chips.replaceChildren(); keep.hidden = true; return; }
@@ -524,6 +647,14 @@
       : `Read “${r.name}”, but found none of the common skills we look for. You can still save the full text.`;
     const pretty = (k) => k.replace(/negotiat$/, "negotiation").replace(/client servic$/, "client servicing");
     chips.replaceChildren(...r.skills.map((k) => el("span", { class: "chip", text: pretty(k) })));
+    const yrs = estimateYears(r.text);
+    const field = $("f-years");
+    if (yrs != null && field) {
+      const same = Number(field.value) === yrs;
+      chips.append(el("p", { class: "hint", style: "flex-basis:100%" },
+        `Your resume shows about ${yrs} year${yrs === 1 ? "" : "s"} of work experience` + (same ? ", which matches your profile." : `; your profile says ${field.value}. `),
+        same ? null : el("button", { class: "linkish", type: "button", "data-act": "use-years", "data-years": yrs, text: `Use ${yrs}` })));
+    }
     keep.hidden = false;
     if (!r.skills.length) $("k-full").checked = true;
   }
@@ -861,6 +992,18 @@
         const j = findJob(jobId);
         return setStatus(jobId, j?.status || "saved", $("note-" + jobId).value, t);
       }
+      case "info":
+        return openJobDetails(jobId, t);
+      case "close-dialog": {
+        const dlg = $("job-dialog"); if (dlg.close) dlg.close(); else dlg.removeAttribute("open");
+        return;
+      }
+      case "show-senior":
+        state.showSenior = !state.showSenior;
+        return renderJobs();
+      case "use-years":
+        $("f-years").value = t.dataset.years; t.closest(".hint").textContent = "Updated. Tap Save to keep it.";
+        return;
       case "sector":
         state.sector = t.dataset.sector;
         return renderJobs();
@@ -883,6 +1026,7 @@
     if (t.dataset && t.dataset.act === "select-status") setStatus(Number(t.closest("[data-job]").dataset.job), t.value, undefined, t);
   });
   $("job-search").addEventListener("input", (ev) => { state.q = ev.target.value; renderJobs(); });
+  $("job-dialog").addEventListener("click", (ev) => { if (ev.target.id === "job-dialog" && ev.target.close) ev.target.close(); });
 
   sb.auth.onAuthStateChange((event) => { if (event === "SIGNED_OUT") showAuth(); });
 
